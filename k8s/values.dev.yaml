@@ -1,0 +1,131 @@
+# Parameters
+ports:
+  grpc: &grpcPort 8080
+
+# Default values for core-service.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: ""
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+podSecurityContext:
+  fsGroup: 2000
+
+securityContext:
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+health:
+  livenessProbe:
+    exec:
+      command: ["/bin/grpc_health_probe", "-addr=:8080"]
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 2
+
+  readinessProbe:
+    exec:
+      command: ["/bin/grpc_health_probe", "-addr=:8080"]
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 2
+
+deployment:
+  minReadySeconds: 5
+  terminationGracePeriodSeconds: 30
+  ports:
+    - name: http
+      containerPort: *grpcPort
+      protocol: TCP
+
+service:
+  type: ClusterIP
+  ports:
+    - port: *grpcPort
+      name: grpc
+      targetPort: *grpcPort
+      protocol: TCP
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+    ephemeral-storage: 10Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+    ephemeral-storage: 10Mi
+
+autoscaling:
+  replicaCount: 1
+  minReplicas: 1
+  maxReplicas: 3
+
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Environment values
+env:
+  DATABASE_NAME: learn
+  DATABASE_COLLECTION_EVENTS: events
+
+# Secrets as environment values
+secrets:
+  DATABASE_URI:
+    name: database
+    key: db_uri_events

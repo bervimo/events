@@ -1,0 +1,9 @@
+.DS_Store
+.vscode
+.env
+
+tmp
+local
+**/testdata
+
+__debug_bin

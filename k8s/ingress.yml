@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: learn
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/service-upstream: "true"
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_cache static-cache;
+      proxy_cache_valid 404 10m;
+      proxy_cache_use_stale error timeout updating http_404 http_500 http_502 http_503 http_504;
+      proxy_cache_bypass $http_cachepurge;
+      add_header X-Cache-Status $upstream_cache_status;
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: k8s-learn.dev
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: events
+                port:
+                  number: 8080
+  tls:
+    - secretName: tls-secret
+      hosts:
+        - k8s-learn.dev
